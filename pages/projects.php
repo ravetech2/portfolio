@@ -3,7 +3,7 @@ $pageTitle = "Projects | John Rave Orpiano";
 
 require_once __DIR__ . "/../includes/db.php";
 
-// Kunin ang lahat ng proyekto mula sa database
+// Retrieve all projects from the database.
 $projects = [];
 try {
     $projects = db()->query(

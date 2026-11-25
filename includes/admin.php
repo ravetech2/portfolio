@@ -1,9 +1,9 @@
 <?php
-// Mga tulong para sa admin dashboard: login check, role check, at CSRF protection
-require_once __DIR__ . "/auth.php"; // session_start() at pag-check kung naka-login
+// Administrator helpers for authentication, authorization, and CSRF protection.
+require_once __DIR__ . "/auth.php"; // Start the session and verify that the user is logged in.
 require_once __DIR__ . "/db.php";
 
-// Gumagawa/kumukuha ng CSRF token para sa mga form
+// Create or retrieve the CSRF token used by dashboard forms.
 function csrf_token(): string
 {
     if (empty($_SESSION["csrf"])) {
@@ -12,7 +12,7 @@ function csrf_token(): string
     return $_SESSION["csrf"];
 }
 
-// Tinitiyak na galing sa sarili nating form ang POST request
+// Verify that the POST request contains a valid token from this application.
 function csrf_check(): void
 {
     if (!hash_equals($_SESSION["csrf"] ?? "", $_POST["csrf"] ?? "")) {
@@ -21,7 +21,7 @@ function csrf_check(): void
     }
 }
 
-// Sinusuri sa database kung admin ang naka-login na user (hindi lang sa session)
+// Check the user's role in the database rather than relying only on session data.
 function is_admin(): bool
 {
     if (empty($_SESSION["user_id"])) {
@@ -37,7 +37,7 @@ function is_admin(): bool
     }
 }
 
-// Shortcut para sa htmlspecialchars
+// Shortcut for safely escaping HTML output.
 function h($value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, "UTF-8");

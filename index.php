@@ -3,8 +3,8 @@ $pageTitle = "John Rave Orpiano | Home";
 
 require_once __DIR__ . "/includes/db.php";
 
-// Kunin ang data para sa landing page mula sa database.
-// Kung hindi gumana ang database, may default pa rin na laman ang page (hindi mag-crash).
+// Load landing-page data from the database.
+// Empty arrays keep the page usable if the database query fails.
 $featuredProjects = [];
 $skills = [];
 $projectCount = 0;
@@ -13,23 +13,23 @@ $skillCount = 0;
 try {
     $pdo = db();
 
-    // Mga featured na proyekto (hanggang 3)
+    // Retrieve up to three featured projects.
     $featuredProjects = $pdo->query(
         "SELECT title, description, technologies, icon, link
          FROM projects WHERE is_featured = 1
          ORDER BY sort_order LIMIT 3"
     )->fetchAll();
 
-    // Mga pangunahing skill (hanggang 4, pinakamataas muna)
+    // Retrieve the four highest-level skills.
     $skills = $pdo->query(
         "SELECT name, level FROM skills ORDER BY level DESC LIMIT 4"
     )->fetchAll();
 
-    // Bilang ng lahat ng proyekto at skill para sa stats
+    // Count all projects and skills for the statistics section.
     $projectCount = (int) $pdo->query("SELECT COUNT(*) FROM projects")->fetchColumn();
     $skillCount = (int) $pdo->query("SELECT COUNT(*) FROM skills")->fetchColumn();
 } catch (PDOException $e) {
-    error_log("Index DB error: " . $e->getMessage()); // itala sa log, huwag ipakita sa bisita
+    error_log("Index DB error: " . $e->getMessage()); // Log the error without exposing details to visitors.
 }
 
 include "includes/header.php";
@@ -68,7 +68,7 @@ include "includes/header.php";
         </div>
     </section>
 
-    <!-- Stats: bilang galing sa database -->
+    <!-- Statistics retrieved from the database -->
     <section class="stats-section">
         <div class="container stats-grid">
             <div class="stat-card"><strong><?= $projectCount ?></strong><span>Projects</span></div>
@@ -105,7 +105,7 @@ include "includes/header.php";
         </div>
     </section>
 
-    <!-- Featured na mga proyekto (galing sa database) -->
+    <!-- Featured projects retrieved from the database -->
     <?php if ($featuredProjects): ?>
     <section class="section">
         <div class="container">
@@ -137,7 +137,7 @@ include "includes/header.php";
     </section>
     <?php endif; ?>
 
-    <!-- Mga pangunahing skill (galing sa database) -->
+    <!-- Top skills retrieved from the database -->
     <?php if ($skills): ?>
     <section class="section skills-section">
         <div class="container">
@@ -165,7 +165,7 @@ include "includes/header.php";
     </section>
     <?php endif; ?>
 
-    <!-- Call to action: mag-contact -->
+    <!-- Call to action: contact section -->
     <section class="cta-section">
         <div class="container cta-content">
             <div>

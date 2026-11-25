@@ -2,7 +2,7 @@
 session_start();
 require_once __DIR__ . "/../includes/db.php";
 
-// Kung naka-login na, diretso sa dashboard
+// Redirect an already authenticated user directly to the dashboard.
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
     header("Location: ../dashboard.php");
     exit;
@@ -15,16 +15,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $password = $_POST["password"] ?? "";
 
     try {
-        // Puwedeng username o email ang gamitin sa pag-login
+        // Allow the user to sign in with either username or email.
         $stmt = db()->prepare(
             "SELECT id, username, password_hash, role FROM users WHERE username = :u OR email = :e LIMIT 1"
         );
         $stmt->execute(["u" => $login, "e" => $login]);
         $user = $stmt->fetch();
 
-        // password_verify ang nagtatapat ng password sa naka-hash na bersyon
+        // Compare the entered password with the stored password hash.
         if ($user && password_verify($password, $user["password_hash"])) {
-            session_regenerate_id(true); // bagong session ID para iwas session fixation
+            session_regenerate_id(true); // Generate a new session ID to reduce session fixation risk.
             $_SESSION["logged_in"] = true;
             $_SESSION["user_id"] = (int) $user["id"];
             $_SESSION["username"] = $user["username"];
@@ -57,7 +57,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <h2>Admin Login</h2>
 <div class="container" id="container">
-	<!-- Sign In form lang ang natira; wala nang Sign Up -->
+	<!-- The sign-in form is the only authentication option currently available. -->
 	<div class="form-container sign-in-container">
 		<form action="pages/login.php" method="post">
 			<h1>Sign in</h1>

@@ -1,11 +1,11 @@
 <?php
-// Admin dashboard: para lang sa mga user na may role na "admin"
+// This is the administrator dashboard; access is restricted to users with the admin role.
 require_once "includes/admin.php";
 
-// Ang title ay ang username ng naka-login, hindi ang salitang "admin"
+// Use the logged-in username as the page title instead of the generic "admin" label.
 $pageTitle = $_SESSION["username"];
 
-// Kung hindi admin, ipakita ang 403 at huwag ituloy
+// Stop non-administrator users with an HTTP 403 response.
 if (!is_admin()) {
     http_response_code(403);
     include "includes/header.php";
@@ -22,13 +22,13 @@ if (!is_admin()) {
     exit;
 }
 
-// Mensahe ("flash") na ipapakita pagkatapos ng isang aksyon
+// Store a temporary success or error message for display after an action.
 function flash(string $type, string $text): void
 {
     $_SESSION["flash"] = ["type" => $type, "text" => $text];
 }
 
-// ---------- PAGPROSESO NG MGA AKSYON (POST) ----------
+// ---------- PROCESS POST ACTIONS ----------
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     csrf_check();
     $action = $_POST["action"] ?? "";
@@ -38,7 +38,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $pdo = db();
 
         switch ($action) {
-            // Magdagdag ng proyekto
+            // Add a new project.
             case "project_add":
                 $anchor = "#projects";
                 $title = trim($_POST["title"] ?? "");
@@ -70,7 +70,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 }
                 break;
 
-            // I-on/off ang "featured" ng proyekto (lalabas sa landing page)
+            // Toggle whether a project is featured on the landing page.
             case "project_toggle":
                 $anchor = "#projects";
                 $pdo->prepare("UPDATE projects SET is_featured = 1 - is_featured WHERE id = :id")
@@ -78,7 +78,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 flash("success", "Project updated.");
                 break;
 
-            // Magtanggal ng proyekto
+            // Delete a project.
             case "project_delete":
                 $anchor = "#projects";
                 $pdo->prepare("DELETE FROM projects WHERE id = :id")
@@ -86,7 +86,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 flash("success", "Project deleted.");
                 break;
 
-            // Magdagdag ng skill
+            // Add a new skill.
             case "skill_add":
                 $anchor = "#skills";
                 $name = trim($_POST["name"] ?? "");
@@ -104,7 +104,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 }
                 break;
 
-            // Magtanggal ng skill
+            // Delete a skill.
             case "skill_delete":
                 $anchor = "#skills";
                 $pdo->prepare("DELETE FROM skills WHERE id = :id")
@@ -112,7 +112,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 flash("success", "Skill deleted.");
                 break;
 
-            // Markahan bilang nabasa na ang mensahe
+            // Mark a message as read.
             case "message_read":
                 $anchor = "#messages";
                 $pdo->prepare("UPDATE messages SET is_read = 1 WHERE id = :id")
@@ -120,7 +120,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 flash("success", "Message marked as read.");
                 break;
 
-            // Magtanggal ng mensahe
+            // Delete a message.
             case "message_delete":
                 $anchor = "#messages";
                 $pdo->prepare("DELETE FROM messages WHERE id = :id")
@@ -128,7 +128,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 flash("success", "Message deleted.");
                 break;
 
-            // Palitan ang password ng admin
+            // Change the administrator password.
             case "password_change":
                 $anchor = "#account";
                 $current = $_POST["current_password"] ?? "";
@@ -146,7 +146,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 } elseif ($new !== $confirm) {
                     flash("error", "New passwords do not match.");
                 } else {
-                    // I-hash ang bagong password bago i-save
+                    // Hash the new password before saving it to the database.
                     $pdo->prepare("UPDATE users SET password_hash = :p WHERE id = :id")
                         ->execute(["p" => password_hash($new, PASSWORD_DEFAULT), "id" => $_SESSION["user_id"]]);
                     session_regenerate_id(true);
@@ -162,12 +162,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         flash("error", "Something went wrong. Please try again.");
     }
 
-    // Post/Redirect/Get: iwas dobleng submit kapag nag-refresh
+    // Use Post/Redirect/Get to prevent duplicate submissions when refreshing.
     header("Location: dashboard.php" . $anchor);
     exit;
 }
 
-// ---------- PAGKUHA NG DATA PARA IPAKITA ----------
+// ---------- LOAD DATA FOR DISPLAY ----------
 $stats = ["projects" => 0, "skills" => 0, "messages" => 0, "unread" => 0];
 $messages = [];
 $projects = [];
@@ -187,7 +187,7 @@ try {
     error_log("Dashboard load error: " . $e->getMessage());
 }
 
-// Kunin at burahin ang flash message (isang beses lang ipapakita)
+// Retrieve and remove the flash message so it appears only once.
 $flash = $_SESSION["flash"] ?? null;
 unset($_SESSION["flash"]);
 
@@ -200,7 +200,7 @@ include "includes/header.php";
     <section class="container dashboard-panel">
 
         <p class="section-label">ADMIN DASHBOARD</p>
-        <!-- Username ng naka-login ang title -->
+        <!-- Username of the logged-in account -->
         <h1><?= h($_SESSION["username"]) ?></h1>
 
         <div class="dash-actions">
@@ -212,7 +212,7 @@ include "includes/header.php";
             <div class="alert <?= $flash["type"] === "success" ? "success" : "error" ?>"><?= h($flash["text"]) ?></div>
         <?php endif; ?>
 
-        <!-- Stat cards -->
+        <!-- Summary statistics cards -->
         <div class="stats-grid four">
             <div class="stat-card"><strong><?= $stats["projects"] ?></strong><span>Projects</span></div>
             <div class="stat-card"><strong><?= $stats["skills"] ?></strong><span>Skills</span></div>
@@ -355,7 +355,7 @@ include "includes/header.php";
             </form>
         </div>
 
-        <!-- ===== ACCOUNT: palitan ang password ===== -->
+        <!-- ===== ACCOUNT: Change Password ===== -->
         <div class="dash-card" id="account">
             <h3>Change Password</h3>
             <form method="post" class="dash-form">

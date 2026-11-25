@@ -1,5 +1,5 @@
 <?php
-// Contact form: sine-save na ang mensahe sa database
+// Process contact-form submissions and save messages in the database.
 require_once __DIR__ . "/../includes/db.php";
 
 $pageTitle = "Contact Me | John Rave Orpiano";
@@ -14,7 +14,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $email = trim($_POST["email"] ?? "");
     $message = trim($_POST["message"] ?? "");
 
-    // Pagsusuri ng input bago i-save
+    // Validate all input before saving it.
     if ($name === "" || $email === "" || $message === "") {
         $error = "Please fill in all fields.";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -23,14 +23,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $error = "One of your entries is too long.";
     } else {
         try {
-            // I-save ang mensahe gamit ang prepared statement (ligtas sa SQL injection)
+            // Save the message using a prepared statement to prevent SQL injection.
             $stmt = db()->prepare(
                 "INSERT INTO messages (name, email, message) VALUES (:name, :email, :message)"
             );
             $stmt->execute(["name" => $name, "email" => $email, "message" => $message]);
 
             $success = "Thank you, $name! Your message has been received.";
-            // Linisin ang form pagkatapos magpadala
+            // Clear the form after a successful submission.
             $name = "";
             $email = "";
             $message = "";
