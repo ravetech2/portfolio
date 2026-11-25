@@ -11,24 +11,24 @@ $projectCount = 0;
 $skillCount = 0;
 
 try {
-    $pdo = db();
+    $connection = db();
 
     // Retrieve up to three featured projects.
-    $featuredProjects = $pdo->query(
+    $featuredProjects = $connection->query(
         "SELECT title, description, technologies, icon, link
          FROM projects WHERE is_featured = 1
          ORDER BY sort_order LIMIT 3"
-    )->fetchAll();
+    )->fetch_all(MYSQLI_ASSOC);
 
     // Retrieve the four highest-level skills.
-    $skills = $pdo->query(
+    $skills = $connection->query(
         "SELECT name, level FROM skills ORDER BY level DESC LIMIT 4"
-    )->fetchAll();
+    )->fetch_all(MYSQLI_ASSOC);
 
     // Count all projects and skills for the statistics section.
-    $projectCount = (int) $pdo->query("SELECT COUNT(*) FROM projects")->fetchColumn();
-    $skillCount = (int) $pdo->query("SELECT COUNT(*) FROM skills")->fetchColumn();
-} catch (PDOException $e) {
+    $projectCount = (int) $connection->query("SELECT COUNT(*) FROM projects")->fetch_row()[0];
+    $skillCount = (int) $connection->query("SELECT COUNT(*) FROM skills")->fetch_row()[0];
+} catch (mysqli_sql_exception $e) {
     error_log("Index DB error: " . $e->getMessage()); // Log the error without exposing details to visitors.
 }
 

@@ -9,8 +9,8 @@ try {
     $projects = db()->query(
         "SELECT title, description, technologies, icon, link
          FROM projects ORDER BY sort_order, id"
-    )->fetchAll();
-} catch (PDOException $e) {
+    )->fetch_all(MYSQLI_ASSOC);
+} catch (mysqli_sql_exception $e) {
     error_log("Projects DB error: " . $e->getMessage());
 }
 

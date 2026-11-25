@@ -28,10 +28,13 @@ function is_admin(): bool
         return false;
     }
     try {
-        $stmt = db()->prepare("SELECT role FROM users WHERE id = :id LIMIT 1");
-        $stmt->execute(["id" => $_SESSION["user_id"]]);
-        return $stmt->fetchColumn() === "admin";
-    } catch (PDOException $e) {
+        $userId = (int) $_SESSION["user_id"];
+        $stmt = db()->prepare("SELECT role FROM users WHERE id = ? LIMIT 1");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
+        return isset($user["role"]) && $user["role"] === "admin";
+    } catch (mysqli_sql_exception $e) {
         error_log("is_admin error: " . $e->getMessage());
         return false;
     }

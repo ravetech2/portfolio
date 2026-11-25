@@ -12,7 +12,7 @@ body {
   background: #0b1120;
   color: #e5e7eb;
   line-height: 1.7;
-  margin: 20px;
+  margin: 0;
 }
 a {
   text-decoration: none;
@@ -37,6 +37,11 @@ textarea {
   --primary: #38bdf8;
   --primary-dark: #0ea5e9;
   --max-width: 1150px;
+}
+
+.container {
+  width: min(calc(100% - 40px), var(--max-width));
+  margin-inline: auto;
 }
 
 .navbar {
@@ -628,15 +633,15 @@ textarea {
   gap: 10px;
 }
 .social-links a {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 50%;
   color: var(--text-muted);
-  transition: 0.3s;
+  transition: all 0.3s ease;
 }
 .social-links a:hover {
   color: var(--primary);
@@ -780,22 +785,6 @@ body.light-mode .footer {
     gap: 20px;
     text-align: center;
   }
-}
-
-.social-links a {
-  width: 42px;
-  height: 42px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  border: 1px solid var(--border);
-  border-radius: 50%;
-
-  color: var(--text-muted);
-
-  transition: all 0.3s ease;
 }
 
 .social-links a i {

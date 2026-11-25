@@ -25,16 +25,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         try {
             // Save the message using a prepared statement to prevent SQL injection.
             $stmt = db()->prepare(
-                "INSERT INTO messages (name, email, message) VALUES (:name, :email, :message)"
+                "INSERT INTO messages (name, email, message) VALUES (?, ?, ?)"
             );
-            $stmt->execute(["name" => $name, "email" => $email, "message" => $message]);
+            $stmt->bind_param("sss", $name, $email, $message);
+            $stmt->execute();
 
             $success = "Thank you, $name! Your message has been received.";
             // Clear the form after a successful submission.
             $name = "";
             $email = "";
             $message = "";
-        } catch (PDOException $e) {
+        } catch (mysqli_sql_exception $e) {
             error_log("Contact DB error: " . $e->getMessage());
             $error = "Sorry, your message could not be sent. Please try again later.";
         }

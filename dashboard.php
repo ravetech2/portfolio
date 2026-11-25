@@ -35,7 +35,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $anchor = "";
 
     try {
-        $pdo = db();
+        $connection = db();
 
         switch ($action) {
             // Add a new project.
@@ -57,15 +57,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 } elseif ($link !== "" && !preg_match('#^https?://#i', $link)) {
                     flash("error", "Link must start with http:// or https://");
                 } else {
-                    $next = (int) $pdo->query("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM projects")->fetchColumn();
-                    $stmt = $pdo->prepare(
+                    $next = (int) $connection->query("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM projects")->fetch_row()[0];
+                    $projectLink = $link === "" ? null : $link;
+                    $stmt = $connection->prepare(
                         "INSERT INTO projects (title, description, technologies, icon, link, is_featured, sort_order)
-                         VALUES (:t, :d, :tech, :i, :l, :f, :s)"
+                         VALUES (?, ?, ?, ?, ?, ?, ?)"
                     );
-                    $stmt->execute([
-                        "t" => $title, "d" => $description, "tech" => $technologies,
-                        "i" => $icon, "l" => $link === "" ? null : $link, "f" => $featured, "s" => $next,
-                    ]);
+                    $stmt->bind_param("sssssii", $title, $description, $technologies, $icon, $projectLink, $featured, $next);
+                    $stmt->execute();
                     flash("success", "Project added.");
                 }
                 break;
@@ -73,16 +72,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             // Toggle whether a project is featured on the landing page.
             case "project_toggle":
                 $anchor = "#projects";
-                $pdo->prepare("UPDATE projects SET is_featured = 1 - is_featured WHERE id = :id")
-                    ->execute(["id" => (int) ($_POST["id"] ?? 0)]);
+                $recordId = (int) ($_POST["id"] ?? 0);
+                $stmt = $connection->prepare("UPDATE projects SET is_featured = 1 - is_featured WHERE id = ?");
+                $stmt->bind_param("i", $recordId);
+                $stmt->execute();
                 flash("success", "Project updated.");
                 break;
 
             // Delete a project.
             case "project_delete":
                 $anchor = "#projects";
-                $pdo->prepare("DELETE FROM projects WHERE id = :id")
-                    ->execute(["id" => (int) ($_POST["id"] ?? 0)]);
+                $recordId = (int) ($_POST["id"] ?? 0);
+                $stmt = $connection->prepare("DELETE FROM projects WHERE id = ?");
+                $stmt->bind_param("i", $recordId);
+                $stmt->execute();
                 flash("success", "Project deleted.");
                 break;
 
@@ -97,9 +100,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 } elseif ($level === false || $level < 0 || $level > 100) {
                     flash("error", "Level must be a number from 0 to 100.");
                 } else {
-                    $next = (int) $pdo->query("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM skills")->fetchColumn();
-                    $pdo->prepare("INSERT INTO skills (name, level, sort_order) VALUES (:n, :l, :s)")
-                        ->execute(["n" => $name, "l" => $level, "s" => $next]);
+                    $next = (int) $connection->query("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM skills")->fetch_row()[0];
+                    $stmt = $connection->prepare("INSERT INTO skills (name, level, sort_order) VALUES (?, ?, ?)");
+                    $stmt->bind_param("sii", $name, $level, $next);
+                    $stmt->execute();
                     flash("success", "Skill added.");
                 }
                 break;
@@ -107,24 +111,30 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             // Delete a skill.
             case "skill_delete":
                 $anchor = "#skills";
-                $pdo->prepare("DELETE FROM skills WHERE id = :id")
-                    ->execute(["id" => (int) ($_POST["id"] ?? 0)]);
+                $recordId = (int) ($_POST["id"] ?? 0);
+                $stmt = $connection->prepare("DELETE FROM skills WHERE id = ?");
+                $stmt->bind_param("i", $recordId);
+                $stmt->execute();
                 flash("success", "Skill deleted.");
                 break;
 
             // Mark a message as read.
             case "message_read":
                 $anchor = "#messages";
-                $pdo->prepare("UPDATE messages SET is_read = 1 WHERE id = :id")
-                    ->execute(["id" => (int) ($_POST["id"] ?? 0)]);
+                $recordId = (int) ($_POST["id"] ?? 0);
+                $stmt = $connection->prepare("UPDATE messages SET is_read = 1 WHERE id = ?");
+                $stmt->bind_param("i", $recordId);
+                $stmt->execute();
                 flash("success", "Message marked as read.");
                 break;
 
             // Delete a message.
             case "message_delete":
                 $anchor = "#messages";
-                $pdo->prepare("DELETE FROM messages WHERE id = :id")
-                    ->execute(["id" => (int) ($_POST["id"] ?? 0)]);
+                $recordId = (int) ($_POST["id"] ?? 0);
+                $stmt = $connection->prepare("DELETE FROM messages WHERE id = ?");
+                $stmt->bind_param("i", $recordId);
+                $stmt->execute();
                 flash("success", "Message deleted.");
                 break;
 
@@ -135,9 +145,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $new = $_POST["new_password"] ?? "";
                 $confirm = $_POST["confirm_password"] ?? "";
 
-                $stmt = $pdo->prepare("SELECT password_hash FROM users WHERE id = :id LIMIT 1");
-                $stmt->execute(["id" => $_SESSION["user_id"]]);
-                $currentHash = $stmt->fetchColumn();
+                $userId = (int) $_SESSION["user_id"];
+                $stmt = $connection->prepare("SELECT password_hash FROM users WHERE id = ? LIMIT 1");
+                $stmt->bind_param("i", $userId);
+                $stmt->execute();
+                $user = $stmt->get_result()->fetch_assoc();
+                $currentHash = $user["password_hash"] ?? null;
 
                 if (!$currentHash || !password_verify($current, $currentHash)) {
                     flash("error", "Current password is incorrect.");
@@ -147,8 +160,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     flash("error", "New passwords do not match.");
                 } else {
                     // Hash the new password before saving it to the database.
-                    $pdo->prepare("UPDATE users SET password_hash = :p WHERE id = :id")
-                        ->execute(["p" => password_hash($new, PASSWORD_DEFAULT), "id" => $_SESSION["user_id"]]);
+                    $passwordHash = password_hash($new, PASSWORD_DEFAULT);
+                    $stmt = $connection->prepare("UPDATE users SET password_hash = ? WHERE id = ?");
+                    $stmt->bind_param("si", $passwordHash, $userId);
+                    $stmt->execute();
                     session_regenerate_id(true);
                     flash("success", "Password changed.");
                 }
@@ -157,7 +172,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             default:
                 flash("error", "Unknown action.");
         }
-    } catch (PDOException $e) {
+    } catch (mysqli_sql_exception $e) {
         error_log("Dashboard action error: " . $e->getMessage());
         flash("error", "Something went wrong. Please try again.");
     }
@@ -174,16 +189,16 @@ $projects = [];
 $skills = [];
 
 try {
-    $pdo = db();
-    $stats["projects"] = (int) $pdo->query("SELECT COUNT(*) FROM projects")->fetchColumn();
-    $stats["skills"]   = (int) $pdo->query("SELECT COUNT(*) FROM skills")->fetchColumn();
-    $stats["messages"] = (int) $pdo->query("SELECT COUNT(*) FROM messages")->fetchColumn();
-    $stats["unread"]   = (int) $pdo->query("SELECT COUNT(*) FROM messages WHERE is_read = 0")->fetchColumn();
+    $connection = db();
+    $stats["projects"] = (int) $connection->query("SELECT COUNT(*) FROM projects")->fetch_row()[0];
+    $stats["skills"]   = (int) $connection->query("SELECT COUNT(*) FROM skills")->fetch_row()[0];
+    $stats["messages"] = (int) $connection->query("SELECT COUNT(*) FROM messages")->fetch_row()[0];
+    $stats["unread"]   = (int) $connection->query("SELECT COUNT(*) FROM messages WHERE is_read = 0")->fetch_row()[0];
 
-    $messages = $pdo->query("SELECT id, name, email, message, is_read, created_at FROM messages ORDER BY created_at DESC, id DESC LIMIT 50")->fetchAll();
-    $projects = $pdo->query("SELECT id, title, technologies, is_featured FROM projects ORDER BY sort_order, id")->fetchAll();
-    $skills   = $pdo->query("SELECT id, name, level FROM skills ORDER BY sort_order, id")->fetchAll();
-} catch (PDOException $e) {
+    $messages = $connection->query("SELECT id, name, email, message, is_read, created_at FROM messages ORDER BY created_at DESC, id DESC LIMIT 50")->fetch_all(MYSQLI_ASSOC);
+    $projects = $connection->query("SELECT id, title, technologies, is_featured FROM projects ORDER BY sort_order, id")->fetch_all(MYSQLI_ASSOC);
+    $skills   = $connection->query("SELECT id, name, level FROM skills ORDER BY sort_order, id")->fetch_all(MYSQLI_ASSOC);
+} catch (mysqli_sql_exception $e) {
     error_log("Dashboard load error: " . $e->getMessage());
 }
 

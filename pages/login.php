@@ -17,10 +17,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     try {
         // Allow the user to sign in with either username or email.
         $stmt = db()->prepare(
-            "SELECT id, username, password_hash, role FROM users WHERE username = :u OR email = :e LIMIT 1"
+            "SELECT id, username, password_hash, role FROM users WHERE username = ? OR email = ? LIMIT 1"
         );
-        $stmt->execute(["u" => $login, "e" => $login]);
-        $user = $stmt->fetch();
+        $stmt->bind_param("ss", $login, $login);
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
 
         // Compare the entered password with the stored password hash.
         if ($user && password_verify($password, $user["password_hash"])) {
@@ -35,7 +36,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
         $error = "Invalid username or password.";
-    } catch (PDOException $e) {
+    } catch (mysqli_sql_exception $e) {
         error_log("Login DB error: " . $e->getMessage());
         $error = "Something went wrong. Please try again later.";
     }

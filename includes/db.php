@@ -1,5 +1,5 @@
 <?php
-// MySQL database connection settings using PDO.
+// MySQL database connection settings.
 // Change these values for another server or database setup.
 const DB_HOST = "localhost";
 const DB_NAME = "portfolio_db";
@@ -7,20 +7,17 @@ const DB_USER = "root";
 const DB_PASS = "";
 
 // Return one reusable database connection, creating it only when needed.
-function db(): PDO
+function db(): mysqli
 {
-    static $pdo = null;
+    static $connection = null;
 
-    if ($pdo === null) {
-        $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
-        $pdo = new PDO($dsn, DB_USER, DB_PASS, [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,   // Throw an exception when a query fails.
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES   => false,                    // Use native prepared statements for SQL injection protection.
-        ]);
+    if ($connection === null) {
+        mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+        $connection = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        $connection->set_charset("utf8mb4");
     }
 
-    return $pdo;
+    return $connection;
 }
 
 // Allow only HTTP and HTTPS URLs and reject unsafe values such as javascript: links.
